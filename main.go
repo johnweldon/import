@@ -42,7 +42,10 @@ var (
   </body>
 </html>`))
 	imports = map[string]*data{
-		"jw4.us/mqd": &data{ImportRoot: "jw4.us/mqd", VCS: "git", VCSRoot: "https://github.com/jw4/mqd", Suffix: ".git"},
+		"jw4.us/import":  &data{ImportRoot: "jw4.us/import", VCS: "git", VCSRoot: "https://github.com/johnweldon/import", Suffix: ""},
+		"jw4.us/mqd":     &data{ImportRoot: "jw4.us/mqd", VCS: "git", VCSRoot: "https://github.com/jw4/mqd", Suffix: ""},
+		"jw4.us/tunnel":  &data{ImportRoot: "jw4.us/tunnel", VCS: "git", VCSRoot: "https://github.com/johnweldon/tunnel", Suffix: ""},
+		"jw4.us/sortcsv": &data{ImportRoot: "jw4.us/sortcsv", VCS: "git", VCSRoot: "https://github.com/johnweldon/sortcsv", Suffix: ""},
 	}
 )
 
