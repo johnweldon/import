@@ -6,30 +6,15 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"net/http/httputil"
-	"strings"
+	"os"
 	"time"
 )
 
-func main() {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/", importHandler)
-
-	server := http.Server{
-		Addr:         ":19980",
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		Handler:      mux,
-	}
-
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal(err)
-	}
-}
-
 var (
 	errNotFound = errors.New("not found")
+	dbFile      = "repo.db"
+	listen      = ":19980"
+	verbose     = false
 	impTmpl     = template.Must(template.New("import").Parse(`<!DOCTYPE html>
 <html>
   <head>
@@ -41,29 +26,56 @@ var (
     Redirecting to docs at <a href="https://godoc.org/{{ .ImportRoot }}{{ .Suffix }}">godoc.org/{{ .ImportRoot }}{{ .Suffix }}</a>...
   </body>
 </html>`))
-	imports = map[string]*data{
-		"jw4.us/import":   &data{ImportRoot: "jw4.us/import", VCS: "git", VCSRoot: "https://github.com/johnweldon/import", Suffix: ""},
-		"jw4.us/mqd":      &data{ImportRoot: "jw4.us/mqd", VCS: "git", VCSRoot: "https://github.com/jw4/mqd", Suffix: ""},
-		"jw4.us/tunnel":   &data{ImportRoot: "jw4.us/tunnel", VCS: "git", VCSRoot: "https://github.com/johnweldon/tunnel", Suffix: ""},
-		"jw4.us/sortcsv":  &data{ImportRoot: "jw4.us/sortcsv", VCS: "git", VCSRoot: "https://github.com/johnweldon/sortcsv", Suffix: ""},
-		"jw4.us/location": &data{ImportRoot: "jw4.us/location", VCS: "git", VCSRoot: "https://github.com/johnweldon/location-service", Suffix: ""},
+	seed = map[string]Repo{
+		"jw4.us/import":   Repo{ImportRoot: "jw4.us/import", VCS: "git", VCSRoot: "https://github.com/johnweldon/import", Suffix: ""},
+		"jw4.us/mqd":      Repo{ImportRoot: "jw4.us/mqd", VCS: "git", VCSRoot: "https://github.com/jw4/mqd", Suffix: ""},
+		"jw4.us/tunnel":   Repo{ImportRoot: "jw4.us/tunnel", VCS: "git", VCSRoot: "https://github.com/johnweldon/tunnel", Suffix: ""},
+		"jw4.us/sortcsv":  Repo{ImportRoot: "jw4.us/sortcsv", VCS: "git", VCSRoot: "https://github.com/johnweldon/sortcsv", Suffix: ""},
+		"jw4.us/location": Repo{ImportRoot: "jw4.us/location", VCS: "git", VCSRoot: "https://github.com/johnweldon/location-service", Suffix: ""},
 	}
 )
 
-type data struct {
-	ImportRoot string `json:"import_root"`
-	VCS        string `json:"vcs"`
-	VCSRoot    string `json:"vcs_root"`
-	Suffix     string `json:"suffix"`
+func main() {
+	if p := os.Getenv("IMPORT_LISTEN_ADDRESS"); p != "" {
+		listen = p
+	}
+	if f := os.Getenv("IMPORT_DB_FILE"); f != "" {
+		dbFile = f
+	}
+	if v := os.Getenv("IMPORT_VERBOSE_LOGGING"); v != "" {
+		verbose = true
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/", newImportHandler(dbFile, seed))
+
+	server := http.Server{
+		Addr:         listen,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		Handler:      newLogger(mux, os.Stdout, verbose),
+	}
+
+	log.Printf("Using db %s", dbFile)
+	log.Printf("Listening on %s", listen)
+	log.Fatal(server.ListenAndServe())
 }
 
-func importHandler(w http.ResponseWriter, r *http.Request) {
-	dumpRequest(r)
-	defer dumpResponse()
+func newImportHandler(path string, seed map[string]Repo) http.Handler {
+	store := NewStore(path)
+	if err := store.Initialize(seed); err != nil {
+		panic(err)
+	}
+	return &importer{store: store}
+}
 
-	meta := &data{}
-	if err := get(r, meta); err != nil {
-		log.Printf("returned 404")
+type importer struct {
+	store *Store
+}
+
+func (i *importer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	meta, err := i.store.Get(r.Host, r.URL.Path)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -73,42 +85,5 @@ func importHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("returned 200")
 	_, _ = w.Write(buf.Bytes())
-}
-
-func get(r *http.Request, meta *data) error {
-	for _, path := range getImportPaths(r) {
-		if m, ok := imports[path]; ok {
-			log.Printf("Import path %q found", path)
-			*meta = *m
-			return nil
-		} else {
-			log.Printf("Import path %q not found", path)
-		}
-	}
-	return errNotFound
-}
-
-func getImportPaths(r *http.Request) []string {
-	var paths []string
-	if r != nil {
-		for segs := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/"); len(segs) > 1; segs = segs[:len(segs)-1] {
-			paths = append(paths, r.Host+strings.Join(segs, "/"))
-		}
-	}
-	if len(paths) == 0 {
-		paths = []string{""}
-	}
-	return paths
-}
-
-func dumpRequest(r *http.Request) {
-	if buf, err := httputil.DumpRequest(r, true); err == nil {
-		log.Printf("Request: %q\n===\n%s\n===\n", getImportPaths(r)[0], string(buf))
-	}
-}
-
-func dumpResponse() {
-	log.Printf("Done")
 }

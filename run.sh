@@ -12,7 +12,9 @@ docker rm -v -f ${NAME}
 docker run -d \
   --name ${NAME} \
   --restart=always \
+  -e IMPORT_LISTEN_ADDRESS=":19980" \
+  -e IMPORT_DB_FILE="/etc/import/repo.db" \
+  -e IMPORT_VERBOSE_LOGGING="" \
   -p 19980:19980 \
   -v ${SCRIPTDIR}/config:/etc/import \
   ${IMAGE}
-
