@@ -21,6 +21,7 @@ var (
 	errNotFound = errors.New("not found")
 )
 
+// Repo represents the mapping from import path to VCS
 type Repo struct {
 	ImportRoot string `json:"import_root"`
 	VCS        string `json:"vcs"`

@@ -18,3 +18,4 @@ image:
 push: clean image
 	docker push $(IMAGE):$(REVISION)
 	docker push $(IMAGE):latest
+

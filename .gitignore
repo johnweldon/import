@@ -1,4 +1,4 @@
-import
-/config/
 *.log
+/config/
+/import
 repo.db
