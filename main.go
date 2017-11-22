@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"errors"
 	"html/template"
 	"log"
 	"net/http"
@@ -11,11 +9,11 @@ import (
 )
 
 var (
-	errNotFound = errors.New("not found")
-	dbFile      = "repo.db"
-	listen      = ":19980"
-	verbose     = false
-	impTmpl     = template.Must(template.New("import").Parse(`<!DOCTYPE html>
+	dbFile  = "repo.db"
+	listen  = ":19980"
+	verbose = false
+	public  = "public"
+	impTmpl = template.Must(template.New("import").Parse(`<!DOCTYPE html>
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -45,9 +43,13 @@ func main() {
 	if v := os.Getenv("IMPORT_VERBOSE_LOGGING"); v != "" {
 		verbose = true
 	}
+	if p := os.Getenv("IMPORT_PUBLIC_DIR"); p != "" {
+		public = p
+	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/", newImportHandler(dbFile, seed))
+	mux.Handle("/_api/", http.StripPrefix("/_api/", newAPIHandler(dbFile)))
+	mux.Handle("/", newImportHandler(dbFile, seed, http.FileServer(http.Dir(public))))
 
 	server := http.Server{
 		Addr:         listen,
@@ -59,31 +61,4 @@ func main() {
 	log.Printf("Using db %s", dbFile)
 	log.Printf("Listening on %s", listen)
 	log.Fatal(server.ListenAndServe())
-}
-
-func newImportHandler(path string, seed map[string]Repo) http.Handler {
-	store := NewStore(path)
-	if err := store.Initialize(seed); err != nil {
-		panic(err)
-	}
-	return &importer{store: store}
-}
-
-type importer struct {
-	store *Store
-}
-
-func (i *importer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	meta, err := i.store.Get(r.Host, r.URL.Path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	var buf bytes.Buffer
-	if err := impTmpl.Execute(&buf, meta); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, _ = w.Write(buf.Bytes())
 }
