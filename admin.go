@@ -1,29 +1,57 @@
 package main
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
+	"net"
 	"net/http"
+	"strings"
 )
 
-func newAPIHandler(path string) http.Handler { return &admin{store: NewStore(path)} }
+func newAPIHandler(path string, safeIPs []string) http.Handler {
+	var safe []*net.IPNet
+	for _, s := range safeIPs {
+		_, n, err := net.ParseCIDR(s)
+		if err != nil {
+			log.Printf("ERROR: invalid safe ip %q: %v", s, err)
+			continue
+		}
+		safe = append(safe, n)
+	}
+	return &admin{
+		store: NewStore(path),
+		safe:  safe,
+	}
+}
 
 type admin struct {
 	store *Store
+	safe  []*net.IPNet
 }
 
 func (a *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var t rest
-	switch r.URL.Path {
-	case "":
-		t = &collection{name: r.Host, store: a.store}
-	default:
-		t = &item{name: r.Host + "/" + r.URL.Path, store: a.store}
+	if !a.allowed(r) {
+		http.Error(w, "not allowed", http.StatusForbidden)
+		return
+	}
+	host := r.Host
+	if h := r.Header.Get("X-Host-Override"); h != "" {
+		host = h
 	}
 
-	log.Printf("admin ServeHTTP: %T %#v", t, t)
+	pth := r.URL.Path
+	if strings.HasPrefix(pth, host+"/") {
+		pth = pth[len(host+"/"):]
+	}
+
+	var t rest
+	switch pth {
+	case "":
+		t = &collection{name: host, store: a.store}
+	default:
+		t = &item{name: host + "/" + pth, store: a.store}
+	}
 
 	switch r.Method {
 	case "GET":
@@ -45,6 +73,22 @@ func (a *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// allowed decides if a request is permitted
+func (a *admin) allowed(r *http.Request) bool {
+	if a != nil {
+		// check if the client ip is in the "safe" networks
+		ip := net.ParseIP(strings.Map(cleanIPv6, getIP(r)))
+		for _, s := range a.safe {
+			if s.Contains(ip) {
+				return true
+			}
+		}
+		// possibly fallback to some sort of authentication scheme
+		// TODO
+	}
+	return false
+}
+
 type rest interface {
 	get(http.ResponseWriter, *http.Request)
 	put(http.ResponseWriter, *http.Request)
@@ -64,8 +108,7 @@ type collection struct {
 func (c *collection) get(w http.ResponseWriter, r *http.Request) {
 	switch r, err := c.store.List(c.name); err {
 	case nil:
-		p := (&indexPage{Title: c.name, Items: r}).String()
-		fmt.Fprintf(w, "%s", p)
+		writeJSON(w, r)
 	case errNotFound:
 		http.Error(w, err.Error(), http.StatusNotFound)
 	default:
@@ -85,7 +128,16 @@ type item struct {
 	store *Store
 }
 
-func (i *item) get(w http.ResponseWriter, r *http.Request)     {}
+func (i *item) get(w http.ResponseWriter, r *http.Request) {
+	switch r, err := i.store.Read(i.name); err {
+	case nil:
+		writeJSON(w, r)
+	case errNotFound:
+		http.Error(w, err.Error(), http.StatusNotFound)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
 func (i *item) put(w http.ResponseWriter, r *http.Request)     {}
 func (i *item) post(w http.ResponseWriter, r *http.Request)    {}
 func (i *item) del(w http.ResponseWriter, r *http.Request)     {}
@@ -94,39 +146,20 @@ func (i *item) options(w http.ResponseWriter, r *http.Request) {}
 func (i *item) head(w http.ResponseWriter, r *http.Request)    {}
 func (i *item) def(w http.ResponseWriter, r *http.Request)     {}
 
-type indexPage struct {
-	Title string
-	Body  string
-	Items []Repo
+func writeJSON(w http.ResponseWriter, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "error writing response: %v", err)
+	}
 }
 
-func (p *indexPage) String() string {
-	t, err := template.New("repos").Parse(indexHTML)
-	if err != nil {
-		panic(err)
+func cleanIPv6(r rune) rune {
+	switch r {
+	case '[', ']':
+		return -1
+	default:
+		return r
 	}
-	var buf bytes.Buffer
-	err = t.Execute(&buf, p)
-	if err != nil {
-		panic(err)
-	}
-	return buf.String()
 }
-
-const (
-	indexHTML = `<!DOCTYPE html>
-<html>
-<head>
-  <title>Index of {{ .Title }}</title>
-</head>
-<body>
-  <h1>{{ .Title }}</h1>
-  {{ .Body }}
-  <div class="repos">
-    <ul>{{range .Items}}
-      <li><a href="https://godoc.org/{{.ImportRoot}}">{{.ImportRoot}}</a></li>{{end}}
-    </ul>
-  </div>
-</body>
-</html>`
-)

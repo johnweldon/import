@@ -47,8 +47,10 @@ func main() {
 		public = p
 	}
 
+	safeIPs := []string{"127.0.0.0/8", "::1/128"}
+
 	mux := http.NewServeMux()
-	mux.Handle("/_api/", http.StripPrefix("/_api/", newAPIHandler(dbFile)))
+	mux.Handle("/_api/", http.StripPrefix("/_api/", newAPIHandler(dbFile, safeIPs)))
 	mux.Handle("/", newImportHandler(dbFile, seed, http.FileServer(http.Dir(public))))
 
 	server := http.Server{

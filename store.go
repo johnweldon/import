@@ -36,7 +36,6 @@ type Store struct {
 }
 
 func (s *Store) Initialize(seed map[string]Repo) error {
-	log.Printf("Store Initialize")
 	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return err
@@ -66,7 +65,6 @@ func (s *Store) Initialize(seed map[string]Repo) error {
 }
 
 func (s *Store) Create(r Repo) error {
-	log.Printf("Store Create: %q", r.ImportRoot)
 	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return err
@@ -95,7 +93,6 @@ func (s *Store) Create(r Repo) error {
 }
 
 func (s *Store) Read(name string) (Repo, error) {
-	log.Printf("Store Read: %q", name)
 	repo := Repo{}
 	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
@@ -123,7 +120,6 @@ func (s *Store) Read(name string) (Repo, error) {
 }
 
 func (s *Store) Update(r Repo) error {
-	log.Printf("Store Update: %q", r.ImportRoot)
 	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return err
@@ -152,7 +148,6 @@ func (s *Store) Update(r Repo) error {
 }
 
 func (s *Store) List(prefix string) ([]Repo, error) {
-	log.Printf("Store List: %q", prefix)
 	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return nil, err
@@ -177,7 +172,6 @@ func (s *Store) List(prefix string) ([]Repo, error) {
 }
 
 func (s *Store) Delete(name string) error {
-	log.Printf("Store Delete: %q", name)
 	return nil
 }
 
