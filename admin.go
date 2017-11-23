@@ -77,7 +77,8 @@ func (a *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (a *admin) allowed(r *http.Request) bool {
 	if a != nil {
 		// check if the client ip is in the "safe" networks
-		ip := net.ParseIP(strings.Map(cleanIPv6, getIP(r)))
+		rip := r.RemoteAddr[:strings.LastIndex(r.RemoteAddr, ":")]
+		ip := net.ParseIP(strings.Map(cleanIPs, rip))
 		for _, s := range a.safe {
 			if s.Contains(ip) {
 				return true
@@ -155,9 +156,9 @@ func writeJSON(w http.ResponseWriter, v interface{}) {
 	}
 }
 
-func cleanIPv6(r rune) rune {
+func cleanIPs(r rune) rune {
 	switch r {
-	case '[', ']':
+	case '[', ']', ' ', '\t', '\r', '\n':
 		return -1
 	default:
 		return r

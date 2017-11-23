@@ -16,6 +16,7 @@ docker run -d \
   -e IMPORT_DB_FILE="/etc/import/repo.db" \
   -e IMPORT_PUBLIC_DIR="/public" \
   -e IMPORT_VERBOSE_LOGGING="" \
+  -e IMPORT_SAFE_IPS="192.168.199.0/24" \
   -p 19980:19980 \
   -v ${SCRIPTDIR}/config:/etc/import \
   -v ${SCRIPTDIR}/public:/public \

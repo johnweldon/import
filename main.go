@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -13,6 +14,7 @@ var (
 	listen  = ":19980"
 	verbose = false
 	public  = "public"
+	safeIPs = []string{"127.0.0.0/8", "::1/128"}
 	impTmpl = template.Must(template.New("import").Parse(`<!DOCTYPE html>
 <html>
   <head>
@@ -46,8 +48,9 @@ func main() {
 	if p := os.Getenv("IMPORT_PUBLIC_DIR"); p != "" {
 		public = p
 	}
-
-	safeIPs := []string{"127.0.0.0/8", "::1/128"}
+	if s := os.Getenv("IMPORT_SAFE_IPS"); s != "" {
+		safeIPs = append(safeIPs, strings.Split(s, ",")...)
+	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/_api/", http.StripPrefix("/_api/", newAPIHandler(dbFile, safeIPs)))
