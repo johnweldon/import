@@ -44,6 +44,7 @@ func main() {
 	}
 	if v := os.Getenv("IMPORT_VERBOSE_LOGGING"); v != "" {
 		verbose = true
+		log.Printf("Verbose Logging enabled")
 	}
 	if p := os.Getenv("IMPORT_PUBLIC_DIR"); p != "" {
 		public = p
@@ -51,9 +52,10 @@ func main() {
 	if s := os.Getenv("IMPORT_SAFE_IPS"); s != "" {
 		safeIPs = append(safeIPs, strings.Split(s, ",")...)
 	}
+	safeNetworks := getNetworks(safeIPs)
 
 	mux := http.NewServeMux()
-	mux.Handle("/_api/", http.StripPrefix("/_api/", newAPIHandler(dbFile, safeIPs)))
+	mux.Handle("/_api/", http.StripPrefix("/_api/", newAPIHandler(dbFile, safeNetworks)))
 	mux.Handle("/", newImportHandler(dbFile, seed, http.FileServer(http.Dir(public))))
 
 	server := http.Server{
@@ -63,7 +65,9 @@ func main() {
 		Handler:      newLogger(mux, os.Stdout, verbose),
 	}
 
-	log.Printf("Using db %s", dbFile)
 	log.Printf("Listening on %s", listen)
+	log.Printf("Using db %s", dbFile)
+	log.Printf("Serving from %q", public)
+	log.Printf("Allowing API access from %+v", safeNetworks)
 	log.Fatal(server.ListenAndServe())
 }

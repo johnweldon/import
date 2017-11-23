@@ -1,9 +1,29 @@
 package main
 
 import (
+	"log"
+	"net"
 	"net/http"
 	"strings"
 )
+
+func getNetworks(cidrs []string) []*net.IPNet {
+	var safe []*net.IPNet
+	hash := map[string]*net.IPNet{}
+	for _, s := range cidrs {
+		ip := cleanIP(s)
+		_, n, err := net.ParseCIDR(ip)
+		if err != nil {
+			log.Printf("ERROR: invalid safe ip %q: %v", ip, err)
+			continue
+		}
+		if _, ok := hash[ip]; !ok {
+			hash[ip] = n
+			safe = append(safe, n)
+		}
+	}
+	return safe
+}
 
 func queryIP(r *http.Request) string {
 	vars := r.URL.Query()

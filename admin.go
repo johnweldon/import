@@ -2,26 +2,17 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strings"
 )
 
-func newAPIHandler(path string, safeIPs []string) http.Handler {
-	var safe []*net.IPNet
-	for _, s := range safeIPs {
-		_, n, err := net.ParseCIDR(cleanIP(s))
-		if err != nil {
-			log.Printf("ERROR: invalid safe ip %q: %v", s, err)
-			continue
-		}
-		safe = append(safe, n)
-	}
+func newAPIHandler(path string, safeNetworks []*net.IPNet) http.Handler {
 	return &admin{
 		store: NewStore(path),
-		safe:  safe,
+		safe:  safeNetworks,
 	}
 }
 
@@ -35,22 +26,13 @@ func (a *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
-	host := r.Host
-	if h := r.Header.Get("X-Host-Override"); h != "" {
-		host = h
-	}
-
-	pth := r.URL.Path
-	if strings.HasPrefix(pth, host+"/") {
-		pth = pth[len(host+"/"):]
-	}
 
 	var t rest
-	switch pth {
-	case "":
-		t = &collection{name: host, store: a.store}
+	switch id := getID(r); id {
+	case "/", "":
+		t = &collection{store: a.store}
 	default:
-		t = &item{name: host + "/" + pth, store: a.store}
+		t = &item{name: id, store: a.store}
 	}
 
 	switch r.Method {
@@ -102,12 +84,12 @@ type rest interface {
 }
 
 type collection struct {
-	name  string
 	store *Store
 }
 
 func (c *collection) get(w http.ResponseWriter, r *http.Request) {
-	switch r, err := c.store.List(c.name); err {
+	prefix := r.URL.Query().Get("prefix")
+	switch r, err := c.store.List(prefix); err {
 	case nil:
 		writeJSON(w, r)
 	case errNotFound:
@@ -116,10 +98,36 @@ func (c *collection) get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
-func (c *collection) put(w http.ResponseWriter, r *http.Request)     {}
-func (c *collection) post(w http.ResponseWriter, r *http.Request)    {}
-func (c *collection) del(w http.ResponseWriter, r *http.Request)     {}
-func (c *collection) patch(w http.ResponseWriter, r *http.Request)   {}
+
+func (c *collection) post(w http.ResponseWriter, r *http.Request) {
+	var repo Repo
+	if err := readJSON(r, &repo); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	switch err := c.store.Create(repo); err {
+	case nil:
+		w.Header().Set("Location", repo.ImportRoot)
+		w.WriteHeader(http.StatusCreated)
+	case errConflict:
+		http.Error(w, "already exists", http.StatusConflict)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (c *collection) put(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "use resource id", http.StatusMethodNotAllowed)
+}
+
+func (c *collection) del(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "use resource id", http.StatusMethodNotAllowed)
+}
+
+func (c *collection) patch(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "use resource id", http.StatusMethodNotAllowed)
+}
+
 func (c *collection) options(w http.ResponseWriter, r *http.Request) {}
 func (c *collection) head(w http.ResponseWriter, r *http.Request)    {}
 func (c *collection) def(w http.ResponseWriter, r *http.Request)     {}
@@ -130,22 +138,51 @@ type item struct {
 }
 
 func (i *item) get(w http.ResponseWriter, r *http.Request) {
-	switch r, err := i.store.Read(i.name); err {
+	switch repos, err := i.store.Read(i.name); err {
 	case nil:
-		writeJSON(w, r)
+		writeJSON(w, repos)
 	case errNotFound:
 		http.Error(w, err.Error(), http.StatusNotFound)
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
-func (i *item) put(w http.ResponseWriter, r *http.Request)     {}
-func (i *item) post(w http.ResponseWriter, r *http.Request)    {}
-func (i *item) del(w http.ResponseWriter, r *http.Request)     {}
+func (i *item) put(w http.ResponseWriter, r *http.Request)  {}
+func (i *item) post(w http.ResponseWriter, r *http.Request) {}
+
+func (i *item) del(w http.ResponseWriter, r *http.Request) {
+	switch err := i.store.Delete(i.name); err {
+	case nil:
+	case errNotFound:
+		http.Error(w, err.Error(), http.StatusNotFound)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func (i *item) patch(w http.ResponseWriter, r *http.Request)   {}
 func (i *item) options(w http.ResponseWriter, r *http.Request) {}
 func (i *item) head(w http.ResponseWriter, r *http.Request)    {}
 func (i *item) def(w http.ResponseWriter, r *http.Request)     {}
+
+func getID(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+
+	return r.URL.Path
+}
+
+func readJSON(r *http.Request, v interface{}) error {
+	if r == nil || r.Body == nil {
+		return errors.New("invalid request")
+	}
+	if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		return fmt.Errorf("invalid content-type: %q", ct)
+	}
+	defer r.Body.Close()
+	return json.NewDecoder(r.Body).Decode(v)
+}
 
 func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")

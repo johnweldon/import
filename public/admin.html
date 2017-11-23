@@ -14,8 +14,8 @@
   <div id="app" v-cloak>
     <h3>{{ heading }}</h3>
     <div class="inputs">
-      <label for="#host">Prefix</label>
-      <input id="host" type="text" v-model="host" v-on:keyup="updateRepos" />
+      <label for="#prefix">Prefix</label>
+      <input id="prefix" type="text" v-model="prefix" v-on:keyup="updateRepos" />
       <button v-on:click="create = true" v-if="!create">Create</button>
     </div>
     <div class="existing">
@@ -68,8 +68,8 @@
       <button v-on:click="create = false">Cancel</button>
     </div>
   </div>
-  <script src="https://unpkg.com/vue"></script>
-  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="js/vue.js"></script>
+  <script src="js/axios.min.js"></script>
   <script src="js/admin.js"></script>
 </body>
 

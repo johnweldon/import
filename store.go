@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"path"
 	"strings"
@@ -19,6 +20,7 @@ const (
 var (
 	errConflict = errors.New("conflict")
 	errNotFound = errors.New("not found")
+	errNilValue = errors.New("nil value")
 )
 
 // Repo represents the mapping from import path to VCS
@@ -27,6 +29,28 @@ type Repo struct {
 	VCS        string `json:"vcs"`
 	VCSRoot    string `json:"vcs_root"`
 	Suffix     string `json:"suffix"`
+}
+
+func (r *Repo) Valid() error {
+	switch {
+	case r == nil:
+		return errNilValue
+	case r.ImportRoot == "":
+		return errors.New("missing import_root")
+	case r.VCSRoot == "":
+		return errors.New("missing vcs_root")
+	case r.VCS == "":
+		return errors.New("missing vcs")
+	default:
+		host, pth := split(r.ImportRoot)
+		if len(strings.Split(host, ".")) < 2 {
+			return fmt.Errorf("invalid host %q", host)
+		}
+		if len(pth) < 2 {
+			return fmt.Errorf("invalid import path %q", pth)
+		}
+	}
+	return nil
 }
 
 func NewStore(file string) *Store { return &Store{dbfile: file} }
@@ -48,6 +72,9 @@ func (s *Store) Initialize(seed map[string]Repo) error {
 			return err
 		}
 		for k, v := range seed {
+			if err := v.Valid(); err != nil {
+				return err
+			}
 			d := b.Get([]byte(k))
 			if d != nil {
 				continue
@@ -65,6 +92,10 @@ func (s *Store) Initialize(seed map[string]Repo) error {
 }
 
 func (s *Store) Create(r Repo) error {
+	if err := r.Valid(); err != nil {
+		return err
+	}
+
 	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return err
@@ -120,6 +151,10 @@ func (s *Store) Read(name string) (Repo, error) {
 }
 
 func (s *Store) Update(r Repo) error {
+	if err := r.Valid(); err != nil {
+		return err
+	}
+
 	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return err
@@ -172,7 +207,21 @@ func (s *Store) List(prefix string) ([]Repo, error) {
 }
 
 func (s *Store) Delete(name string) error {
-	return nil
+	log.Printf("DELETING: %q", name)
+	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte(bucketName))
+		if err != nil {
+			return err
+		}
+		k := clean(name)
+		return b.Delete([]byte(k))
+	})
 }
 
 func getImports(name string) []string {
@@ -195,7 +244,7 @@ func split(name string) (host string, pth string) {
 		host = segs[0]
 	}
 	if len(segs) > 1 {
-		pth = "/" + path.Clean(segs[1])
+		pth = path.Clean("/" + segs[1])
 	}
 	return
 }

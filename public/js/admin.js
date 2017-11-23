@@ -2,7 +2,7 @@ var app = new Vue({
   el: '#app',
   data: {
     heading: "Admin Page",
-    host: "jw4.us",
+    prefix: "jw4.us",
     current: null,
     create: false,
     saving: false,
@@ -12,7 +12,7 @@ var app = new Vue({
       vcs: null,
       suffix: null,
     },
-    repos: []
+    repos: null
   },
   created: function () {
     this.updateRepos();
@@ -23,29 +23,25 @@ var app = new Vue({
       if (target) {
         if (confirm("Delete " + target + "?")) {
           var me = this;
-          me.saving = true;
-          var x = axios.create({
-            headers: {
-              'X-Host-Override': me.host
-            }
-          });
+          var x = axios.create({});
+
           x.delete("_api/" + target)
             .then(function (res) {
               console.log("DELETED", target, res);
               me.updateRepos();
+            })
+            .catch(function (err) {
+              console.log("ERROR", err.response.data);
             });
         }
       }
     },
     updateRepos: function () {
       var me = this;
-      var x = axios.create({
-        headers: {
-          'X-Host-Override': me.host
-        }
-      });
+      var x = axios.create({});
 
-      x.get("_api/")
+      me.current = null;
+      x.get("_api/?prefix=" + me.prefix)
         .then(function (res) {
           me.repos = res.data;
         })
@@ -55,12 +51,9 @@ var app = new Vue({
     },
     createRepo: function () {
       var me = this;
+      var x = axios.create({});
+
       me.saving = true;
-      var x = axios.create({
-        headers: {
-          'X-Host-Override': me.host
-        }
-      });
       x.post("_api/", me.m)
         .then(function (res) {
           me.saving = false;
@@ -73,6 +66,10 @@ var app = new Vue({
           };
           me.updateRepos();
         })
+        .catch(function (err) {
+          me.saving = false;
+          console.log("ERROR", err.response.data);
+        });
     },
     createValid: function () {
       return this.m.import_root && this.m.vcs_root && this.m.vcs;
