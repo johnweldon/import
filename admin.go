@@ -12,7 +12,7 @@ import (
 func newAPIHandler(path string, safeIPs []string) http.Handler {
 	var safe []*net.IPNet
 	for _, s := range safeIPs {
-		_, n, err := net.ParseCIDR(s)
+		_, n, err := net.ParseCIDR(cleanIP(s))
 		if err != nil {
 			log.Printf("ERROR: invalid safe ip %q: %v", s, err)
 			continue
@@ -31,8 +31,8 @@ type admin struct {
 }
 
 func (a *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !a.allowed(r) {
-		http.Error(w, "not allowed", http.StatusForbidden)
+	if err := a.allowed(r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
 	host := r.Host
@@ -74,20 +74,20 @@ func (a *admin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // allowed decides if a request is permitted
-func (a *admin) allowed(r *http.Request) bool {
+func (a *admin) allowed(r *http.Request) error {
+	lip := lastForwarder(r)
 	if a != nil {
 		// check if the client ip is in the "safe" networks
-		rip := r.RemoteAddr[:strings.LastIndex(r.RemoteAddr, ":")]
-		ip := net.ParseIP(strings.Map(cleanIPs, rip))
+		ip := net.ParseIP(lip)
 		for _, s := range a.safe {
 			if s.Contains(ip) {
-				return true
+				return nil
 			}
 		}
 		// possibly fallback to some sort of authentication scheme
 		// TODO
 	}
-	return false
+	return fmt.Errorf("request not permitted. [%s]", lip)
 }
 
 type rest interface {
@@ -153,14 +153,5 @@ func writeJSON(w http.ResponseWriter, v interface{}) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "error writing response: %v", err)
-	}
-}
-
-func cleanIPs(r rune) rune {
-	switch r {
-	case '[', ']', ' ', '\t', '\r', '\n':
-		return -1
-	default:
-		return r
 	}
 }

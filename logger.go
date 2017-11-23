@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
-	"strings"
 )
 
 func newLogger(s *http.ServeMux, w io.Writer, verbose bool) http.Handler {
@@ -31,7 +30,7 @@ func (l *logger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (l *logger) requestLogger(r *http.Request) {
-	l.l.Printf("(client %s) %s %s %s [%s]", getIP(r), r.Host, r.Method, r.URL.Path, r.UserAgent())
+	l.l.Printf("(client %s) %s %s %s [%s]", queryIP(r), r.Host, r.Method, r.URL.Path, r.UserAgent())
 	if l.verbose {
 		b, err := httputil.DumpRequest(r, true)
 		if err != nil {
@@ -72,18 +71,6 @@ func (l *logger) responseLogger(r *http.Request, w http.ResponseWriter) (http.Re
 			fmt.Fprint(l.o, "\n")
 		}
 
-		l.l.Printf("(client %s) %d %s", getIP(r), rr.Code, http.StatusText(rr.Code))
+		l.l.Printf("(client %s) %d %s", queryIP(r), rr.Code, http.StatusText(rr.Code))
 	}
-}
-
-func getIP(r *http.Request) string {
-	vars := r.URL.Query()
-	ip := vars.Get("ip")
-	if ip == "" {
-		ip = r.Header.Get("X-Forwarded-For")
-		if ip == "" {
-			ip = r.RemoteAddr[:strings.LastIndex(r.RemoteAddr, ":")]
-		}
-	}
-	return ip
 }
