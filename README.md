@@ -6,8 +6,11 @@ Uses [boltdb](htpts://github.com/boltdb/bolt), but otherwise all standard librar
 
 Plans include:
 
- - API for managing repos that this service handles
- - UI for listing and exploring repos, and managing through the API
+ - ~API for managing repos that this service handles~
+ - ~UI for listing and exploring repos, and managing through the API~
+ - Better Authentication and Authorization of Admin API (currently just uses IP whitelisting)
+ - Finish **U**pdate portion of **CRUD** API (**CR D** is done)
+ - Consider dropping BoltDB, in favour of simple JSON file (just to remove external dependencies)
 
 ## Installation
 
