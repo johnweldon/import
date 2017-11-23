@@ -36,8 +36,8 @@ var (
 )
 
 func main() {
-	if p := os.Getenv("IMPORT_LISTEN_ADDRESS"); p != "" {
-		listen = p
+	if p := os.Getenv("PORT"); p != "" {
+		listen = ":" + p
 	}
 	if f := os.Getenv("IMPORT_DB_FILE"); f != "" {
 		dbFile = f
