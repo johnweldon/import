@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css?family=Cousine');
+body {
+  margin: 3em;
+  font-family: 'Cousine', monospace;
+}
+
+[v-cloak] {
+  display: none;
+}
+
+.existing {
+  float: left;
+  margin: 1em 2em 1em 1em;
+}
+
+.existing li {
+  list-style: none;
+}
+
+.details {
+  float: left;
+  margin: 2em 1em 1em 1em;
+}
+
+.details td {
+  padding: 2px 8px;
+}
+
+.details table tr:nth-child(even) {
+  background: rgba(245, 245, 255, 0.8);
+}
+
+.details table tr:nth-child(odd) {
+  background: rgba(205, 205, 215, 0.8);
+}
+
+.details table td:first-child {
+  text-align: right;
+}
+
+.create {
+  clear: both;
+}
+
+.create table td:first-child {
+  text-align: right;
+}
+
+.create table td input {
+  width: 25em;
+}

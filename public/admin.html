@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Go Import Admin">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+  <title>Admin</title>
+  <link rel="stylesheet" type="text/css" href="css/base.css">
+  <link rel="icon" href="/favicon.ico">
+</head>
+
+<body>
+  <div id="app" v-cloak>
+    <h3>{{ heading }}</h3>
+    <div class="inputs">
+      <label for="#host">Prefix</label>
+      <input id="host" type="text" v-model="host" v-on:keyup="updateRepos" />
+      <button v-on:click="create = true" v-if="!create">Create</button>
+    </div>
+    <div class="existing">
+      <ul>
+        <li v-for="repo in repos">
+          <span title="delete" v-on:click="deleteRepo" :data-repo="repo.import_root">&times;</span>&nbsp;<span v-on:click="current = repo">{{ repo.import_root }}<span>
+        </li>
+      </ul>
+    </div>
+    <div v-if="current" v-on:click="current = null" class="details">
+      <table>
+        <tr>
+          <td>Import Root</td>
+          <td>{{ current.import_root }}</td>
+        </tr>
+        <tr>
+          <td>VCS Root</td>
+          <td>{{ current.vcs_root }}</td>
+        </tr>
+        <tr>
+          <td>VCS</td>
+          <td>{{ current.vcs }}</td>
+        </tr>
+        <tr>
+          <td>Suffix</td>
+          <td>{{ current.suffix }}</td>
+        </tr>
+      </table>
+    </div>
+    <div v-if="create" class="create">
+      <table>
+        <tr>
+          <td><label for="#import_root">Import Root</label></td>
+          <td><input id="import_root" type="text" v-model="m.import_root" :disabled="saving" /></td>
+        </tr>
+        <tr>
+          <td><label for="#vcs_root">VCS Root</label></td>
+          <td><input id="vcs_root" type="text" v-model="m.vcs_root" :disabled="saving" /></td>
+        </tr>
+        <tr>
+          <td><label for="#vcs">VCS</label></td>
+          <td><input id="vcs" type="text" v-model="m.vcs" :disabled="saving" /></td>
+        </tr>
+        <tr>
+          <td><label for="#suffix">Suffix</label></td>
+          <td><input id="suffix" type="text" v-model="m.suffix" :disabled="saving" /></td>
+        </tr>
+      </table>
+      <button v-on:click="createRepo" :disabled="!createValid()">Create</button>
+      <button v-on:click="create = false">Cancel</button>
+    </div>
+  </div>
+  <script src="https://unpkg.com/vue"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+
+</html>
