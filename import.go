@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"html/template"
 	"net/http"
 )
 
@@ -36,3 +37,15 @@ func (i *importer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	_, _ = w.Write(buf.Bytes())
 }
+
+var impTmpl = template.Must(template.New("import").Parse(`<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="go-import" content="{{ .ImportRoot }} {{ .VCS }} {{ .VCSRoot }}">
+    <meta http-equiv="refresh" content="0; url=https://godoc.org/{{ .ImportRoot }}{{ .Suffix }}">
+  </head>
+  <body>
+    Redirecting to docs at <a href="https://godoc.org/{{ .ImportRoot }}{{ .Suffix }}">godoc.org/{{ .ImportRoot }}{{ .Suffix }}</a>...
+  </body>
+</html>`))

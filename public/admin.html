@@ -16,7 +16,6 @@
     <div class="inputs">
       <label for="#prefix">Prefix</label>
       <input id="prefix" type="text" v-model="prefix" v-on:keyup="updateRepos" />
-      <button v-on:click="create = true" v-if="!create">Create</button>
     </div>
     <div class="existing">
       <ul>
@@ -24,6 +23,7 @@
           <span title="delete" v-on:click="deleteRepo" :data-repo="repo.import_root">&times;</span>&nbsp;<span v-on:click="current = repo">{{ repo.import_root }}<span>
         </li>
       </ul>
+      <button v-on:click="create = true" v-if="!create">Create</button>
     </div>
     <div v-if="current" v-on:click="current = null" class="details">
       <table>
@@ -64,8 +64,8 @@
           <td><input id="suffix" type="text" v-model="m.suffix" :disabled="saving" /></td>
         </tr>
       </table>
-      <button v-on:click="createRepo" :disabled="!createValid()">Create</button>
       <button v-on:click="create = false">Cancel</button>
+      <button v-on:click="createRepo" :disabled="!createValid()">Create</button>
     </div>
   </div>
   <script src="js/vue.js"></script>

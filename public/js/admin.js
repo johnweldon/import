@@ -2,7 +2,7 @@ var app = new Vue({
   el: '#app',
   data: {
     heading: "Admin Page",
-    prefix: "jw4.us",
+    prefix: "",
     current: null,
     create: false,
     saving: false,
