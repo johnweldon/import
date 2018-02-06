@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"jw4.us/import/pkg"
 )
 
 var (
@@ -36,17 +38,17 @@ func init() {
 }
 
 func main() {
-	safeNetworks := getNetworks(safeIPs)
+	safeNetworks := pkg.GetNetworks(safeIPs)
 
 	mux := http.NewServeMux()
-	mux.Handle("/_api/", http.StripPrefix("/_api/", newAPIHandler(dbFile, safeNetworks)))
-	mux.Handle("/", newImportHandler(dbFile, nil, http.FileServer(http.Dir(public))))
+	mux.Handle("/_api/", http.StripPrefix("/_api/", pkg.NewAPIHandler(dbFile, safeNetworks)))
+	mux.Handle("/", pkg.NewImportHandler(dbFile, nil, http.FileServer(http.Dir(public))))
 
 	server := http.Server{
 		Addr:         listen,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
-		Handler:      newLogger(mux, os.Stdout, verbose),
+		Handler:      pkg.NewLogger(mux, os.Stdout, verbose),
 	}
 
 	log.Printf("Listening on %s", listen)

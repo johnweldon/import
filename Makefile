@@ -8,11 +8,11 @@ endif
 all: image
 
 clean:
-	-rm ./import
-	go clean .
+	-rm ./import ./api ./imp
+	go clean ./...
 
 image:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags netgo -ldflags="-s -w" -o import .
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags netgo -ldflags="-s -w" -o api ./cmd/api
 	docker build -t $(IMAGE):latest -t $(IMAGE):$(REVISION) .
 
 push: clean image

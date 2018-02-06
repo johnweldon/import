@@ -1,4 +1,5 @@
 *.log
 /config/
-/import
+/api
+/imp
 repo.db

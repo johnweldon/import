@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"bytes"
@@ -51,6 +51,13 @@ func (r *Repo) Valid() error {
 		}
 	}
 	return nil
+}
+
+func (r *Repo) String() string {
+	if err := r.Valid(); err != nil {
+		return err.Error()
+	}
+	return fmt.Sprintf("Name: %-20s VCS: %s (%s)", r.ImportRoot, r.VCSRoot, r.VCS)
 }
 
 func NewStore(file string) *Store { return &Store{dbfile: file} }

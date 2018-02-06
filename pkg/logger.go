@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"net/http/httputil"
 )
 
-func newLogger(s *http.ServeMux, w io.Writer, verbose bool) http.Handler {
+func NewLogger(s *http.ServeMux, w io.Writer, verbose bool) http.Handler {
 	ll := log.New(w, "[http] ", log.LstdFlags|log.LUTC)
 	return &logger{mux: s, verbose: verbose, l: ll, o: w}
 }

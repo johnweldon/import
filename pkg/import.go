@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func newImportHandler(path string, seed map[string]Repo, fallback http.Handler) http.Handler {
+func NewImportHandler(path string, seed map[string]Repo, fallback http.Handler) http.Handler {
 	store := NewStore(path)
 	if err := store.Initialize(seed); err != nil {
 		panic(err)

@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func newAPIHandler(path string, safeNetworks []*net.IPNet) http.Handler {
+func NewAPIHandler(path string, safeNetworks []*net.IPNet) http.Handler {
 	return &admin{
 		store: NewStore(path),
 		safe:  safeNetworks,

@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func getNetworks(cidrs []string) []*net.IPNet {
+func GetNetworks(cidrs []string) []*net.IPNet {
 	var safe []*net.IPNet
 	hash := map[string]*net.IPNet{}
 	for _, s := range cidrs {
