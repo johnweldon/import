@@ -1,0 +1,69 @@
+project_name: import
+
+env:
+  - CGO_ENABLED=0
+  - DOCKER_REPO={{ if index .Env "DOCKER_REPO" }}{{ .Env.DOCKER_REPO }}{{ else }}docker.jw4.us/import{{ end }}
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: cli
+    main: ./cmd/api
+    binary: api
+    ldflags:
+      - -s
+      - -w
+      - -extldflags "-static"
+    tags:
+      - netgo
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+dockers:
+  - id: amd64
+    use: buildx
+    goarch: amd64
+    extra_files:
+      - public/
+    image_templates:
+      - "{{ .Env.DOCKER_REPO }}:{{ .Tag }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+  - id: arm64
+    use: buildx
+    goarch: arm64
+    extra_files:
+      - public/
+    image_templates:
+      - "{{ .Env.DOCKER_REPO }}:{{ .Tag }}-arm64v8"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+
+docker_manifests:
+  - id: main
+    name_template: "{{ .Env.DOCKER_REPO }}:{{ .Tag }}"
+    image_templates:
+      - "{{ .Env.DOCKER_REPO }}:{{ .Tag }}-amd64"
+      - "{{ .Env.DOCKER_REPO }}:{{ .Tag }}-arm64v8"
+  - id: latest
+    name_template: "{{ .Env.DOCKER_REPO }}:latest"
+    image_templates:
+      - "{{ .Env.DOCKER_REPO }}:{{ .Tag }}-amd64"
+      - "{{ .Env.DOCKER_REPO }}:{{ .Tag }}-arm64v8"
+
+
+archives:
+  - format: binary
+
+release:
+  disable: true
+
+checksum:
+  disable: true

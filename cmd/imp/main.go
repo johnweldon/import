@@ -8,9 +8,7 @@ import (
 	"jw4.us/import/pkg"
 )
 
-var (
-	dbFile = "repo.db"
-)
+var dbFile = "repo.db"
 
 func init() {
 	flag.StringVar(&dbFile, "db", dbFile, "BoltDB file name")

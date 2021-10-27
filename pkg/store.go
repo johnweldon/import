@@ -67,7 +67,7 @@ type Store struct {
 }
 
 func (s *Store) Initialize(seed map[string]Repo) error {
-	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
+	db, err := bolt.Open(s.dbfile, 0o600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (s *Store) Create(r Repo) error {
 		return err
 	}
 
-	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
+	db, err := bolt.Open(s.dbfile, 0o600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (s *Store) Create(r Repo) error {
 
 func (s *Store) Read(name string) (Repo, error) {
 	repo := Repo{}
-	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
+	db, err := bolt.Open(s.dbfile, 0o600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return repo, err
 	}
@@ -162,7 +162,7 @@ func (s *Store) Update(r Repo) error {
 		return err
 	}
 
-	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
+	db, err := bolt.Open(s.dbfile, 0o600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (s *Store) Update(r Repo) error {
 }
 
 func (s *Store) List(prefix string) ([]Repo, error) {
-	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
+	db, err := bolt.Open(s.dbfile, 0o600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func (s *Store) List(prefix string) ([]Repo, error) {
 
 func (s *Store) Delete(name string) error {
 	log.Printf("DELETING: %q", name)
-	db, err := bolt.Open(s.dbfile, 0600, &bolt.Options{Timeout: 20 * time.Second})
+	db, err := bolt.Open(s.dbfile, 0o600, &bolt.Options{Timeout: 20 * time.Second})
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func clean(name string) string {
 	return host + pth
 }
 
-func split(name string) (host string, pth string) {
+func split(name string) (host, pth string) {
 	segs := strings.SplitN(name, "/", 2)
 	if len(segs) > 0 {
 		host = segs[0]

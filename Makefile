@@ -1,21 +1,11 @@
-IMAGE=docker.jw4.us/import
+all: release
 
-ifeq ($(REVISION),)
-	DIRTY=$(shell git diff-index --quiet HEAD || echo "-dirty")
-	REVISION=$(shell git rev-parse --short HEAD)$(DIRTY)
-endif
-
-all: image
+init:
+	go install github.com/goreleaser/goreleaser@latest
 
 clean:
-	-rm ./import ./api ./imp
+	-rm -rf ./import ./api ./imp ./dist
 	go clean ./...
 
-image:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags netgo -ldflags="-s -w" -o api ./cmd/api
-	docker build -t $(IMAGE):latest -t $(IMAGE):$(REVISION) .
-
-push: clean image
-	docker push $(IMAGE):$(REVISION)
-	docker push $(IMAGE):latest
-
+release: init
+	goreleaser release --skip-validate --rm-dist
